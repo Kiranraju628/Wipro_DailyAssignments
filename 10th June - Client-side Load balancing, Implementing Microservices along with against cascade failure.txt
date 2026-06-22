@@ -1,0 +1,508 @@
+Module 1: Understanding Circuit Breaker Concept
+===============================================
+
+1. What is Cascade Failure?
+
+A cascade failure occurs when one microservice fails and that failure spreads to other dependent services, causing the entire system to become unstable.
+
+Example
+-------
+
+Service A → Service B → Service C
+                      ↓
+                   Failure
+                      ↓
+Service B waits indefinitely
+                      ↓
+Service A also fails
+
+
+How Circuit Breaker Prevents System Collapse?
+
+A Circuit Breaker detects repeated failures and stops sending requests to the failed service temporarily.
+
+Instead of waiting for a timeout:
+---------------------------------
+
+Request
+   ↓
+Circuit Breaker
+   ↓
+Fallback Response
+
+
+This prevents:
+
+Resource exhaustion
+Long response times
+Cascade failures
+
+
+Circuit Breaker Diagram
+-----------------------
+
+Without Circuit Breaker
+-----------------------
+
+Client
+  |
+Service A
+  |
+Service B
+  |
+Service C (DOWN)
+  |
+Failure propagates
+
+
+With Circuit Breaker
+--------------------
+
+Client
+  |
+Service A
+  |
+Circuit Breaker
+  |
+Service B
+  |
+Service C (DOWN)
+
+Circuit Opens
+     ↓
+Fallback Response
+
+
+
+Assignment Questions
+--------------------
+
+What are the 3 States of a Circuit Breaker?
+1. CLOSED State
+Normal State
+Requests pass normally.
+Failures are monitored.
+
+2. OPEN State
+Too many failures detected
+Requests are blocked.
+Fallback method executes.
+
+3. HALF-OPEN State
+Testing State
+Allows a few requests.
+If successful → CLOSED.
+If failed → OPEN.
+
+
+Retry Pattern vs Circuit Breaker Pattern
+----------------------------------------
+
+| Feature          | Retry Pattern        | Circuit Breaker Pattern |
+| ---------------- | -------------------- | ----------------------- |
+| Purpose          | Retry failed request | Stop failed requests    |
+| Action           | Attempts again       | Blocks calls            |
+| Network Traffic  | Increased            | Reduced                 |
+| Failure Handling | Temporary issues     | Continuous failures     |
+| Example          | Retry 3 times        | Open circuit            |
+
+
+
+Module 2: Spring Boot Microservices Setup
+=========================================
+
+Task 1: Create order-service
+----------------------------
+
+Controller
+----------
+
+@RestController
+@RequestMapping("/order")
+public class OrderController {
+
+    @GetMapping("/{id}")
+    public String getOrder(@PathVariable String id) {
+        return "Order Id : " + id;
+    }
+}
+
+Create payment-service
+----------------------
+
+Controller
+----------
+
+@RestController
+@RequestMapping("/payment")
+public class PaymentController {
+
+    @GetMapping("/{orderId}")
+    public String getPayment(
+            @PathVariable String orderId) {
+
+        return "Payment Success for Order "
+                + orderId;
+    }
+}
+
+
+Order Service Calling Payment Service
+-------------------------------------
+
+RestTemplate Bean
+-----------------
+
+@Bean
+public RestTemplate restTemplate() {
+    return new RestTemplate();
+}
+
+
+Service Class
+-------------
+
+@Service
+public class OrderService {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    public String getPayment(String orderId) {
+
+        return restTemplate.getForObject(
+                "http://localhost:8081/payment/"
+                        + orderId,
+                String.class);
+    }
+}
+
+
+Expected Flow (Without Circuit Breaker)
+---------------------------------------
+
+Order Service
+      |
+      ↓
+Payment Service
+
+
+If Payment Service is DOWN:
+---------------------------
+
+Request Timeout
+      ↓
+Order Service Failure
+      ↓
+Poor Performance
+      ↓
+System Instability
+
+
+Module 3: Circuit Breaker using Resilience4J
+============================================
+
+Task 2: Dependencies
+--------------------
+
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>
+        spring-cloud-starter-circuitbreaker-resilience4j
+    </artifactId>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>
+        spring-boot-starter-actuator
+    </artifactId>
+</dependency>
+
+
+Task 3: Enable Circuit Breaker
+------------------------------
+
+@Service
+public class OrderService {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @CircuitBreaker(
+            name = "paymentService",
+            fallbackMethod = "paymentFallback")
+    public String getPayment(String orderId) {
+
+        return restTemplate.getForObject(
+                "http://localhost:8081/payment/"
+                        + orderId,
+                String.class);
+    }
+
+    public String paymentFallback(
+            String orderId,
+            Throwable t) {
+
+        return "Payment service is currently unavailable. Please try later.";
+    }
+}
+
+
+Test Cases
+----------
+
+| Scenario             | Expected Result   |
+| -------------------- | ----------------- |
+| Payment Service UP   | Normal Response   |
+| Payment Service DOWN | Fallback Response |
+| High Latency         | Circuit Opens     |
+
+
+
+Module 4: Circuit Breaker Configuration
+=======================================
+
+application.yml
+---------------
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      paymentService:
+        registerHealthIndicator: true
+        slidingWindowSize: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+
+
+What is failureRateThreshold?
+failureRateThreshold = 50
+
+Meaning:
+
+If 50% or more requests fail in the configured window, the circuit opens.
+
+Example
+-------
+
+Sliding Window = 5 requests
+
+Success = 2
+Failure = 3
+
+Failure Rate = 60%
+
+Circuit → OPEN
+
+
+What Happens in HALF-OPEN State?
+
+After the OPEN timeout expires:
+
+OPEN
+  ↓
+HALF-OPEN
+
+Allows a limited number of requests.
+
+Example:
+
+permittedNumberOfCallsInHalfOpenState = 3
+
+If all succeed:
+
+HALF-OPEN → CLOSED
+
+If any fail:
+
+HALF-OPEN → OPEN
+
+
+Module 5: Monitoring using Prometheus + Actuator
+================================================
+
+Task 6: Enable Actuator
+-----------------------
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+
+
+Task 7: Add Prometheus Dependency
+---------------------------------
+
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>
+        micrometer-registry-prometheus
+    </artifactId>
+</dependency>
+
+
+Task 8: Verify Metrics
+----------------------
+
+Open:
+http://localhost:8080/actuator/prometheus
+
+Important Metrics
+-----------------
+
+| Metric                       | Purpose               |
+| ---------------------------- | --------------------- |
+| circuitbreaker_state         | Circuit status        |
+| http_server_requests_seconds | Request latency       |
+| resilience4j_calls           | Circuit breaker calls |
+| jvm_memory_used_bytes        | JVM memory            |
+| process_uptime_seconds       | Application uptime    |
+
+
+
+Prometheus Configuration
+------------------------
+
+scrape_configs:
+  - job_name: 'spring-boot'
+
+    metrics_path: '/actuator/prometheus'
+
+    static_configs:
+      - targets:
+          - 'localhost:8080'
+
+
+
+Module 6: Spring Cloud Config Server
+====================================
+
+Task 9: Create Config Server
+----------------------------
+
+Dependency
+----------
+
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>
+        spring-cloud-config-server
+    </artifactId>
+</dependency>
+
+
+Main Class
+----------
+
+@EnableConfigServer
+@SpringBootApplication
+public class ConfigServerApplication {
+
+    public static void main(String[] args) {
+
+        SpringApplication.run(
+                ConfigServerApplication.class,
+                args);
+    }
+}
+
+
+application.yml
+---------------
+
+server:
+  port: 8888
+
+spring:
+  cloud:
+    config:
+      server:
+        git:
+          uri:
+            https://github.com/your-repo/config-repo
+
+
+Task 10: Create Config Client
+-----------------------------
+
+Dependency
+----------
+
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>
+        spring-cloud-starter-config
+    </artifactId>
+</dependency>
+
+
+bootstrap.yml
+-------------
+spring:
+  application:
+    name: order-service
+
+  config:
+    import:
+      optional:configserver:http://localhost:8888
+
+
+
+Task 11: External Configuration
+-------------------------------
+
+order-service.yml (Git Repository)
+----------------------------------
+
+server:
+  port: 8080
+
+payment:
+  timeout: 3000
+
+
+
+Questions
+---------
+
+Why Use Config Server?
+
+Benefits:
+
+Centralized configuration management
+Avoid duplicate configurations
+Dynamic configuration updates
+Environment-specific configurations
+Better security and maintainability
+Example
+
+Without Config Server:
+
+Order Service -> application.yml
+Payment Service -> application.yml
+User Service -> application.yml
+
+With Config Server:
+
+Config Server
+      |
+--------------------------------
+| Order | Payment | User |
+--------------------------------
+
+
+Difference Between application.yml and bootstrap.yml
+----------------------------------------------------
+
+| Feature              | application.yml      | bootstrap.yml                  |
+| -------------------- | -------------------- | ------------------------------ |
+| Purpose              | Application settings | External configuration loading |
+| Load Time            | After bootstrap      | Before application startup     |
+| Config Server Access | No                   | Yes                            |
+| Priority             | Lower                | Higher                         |
+| Usage                | Business properties  | Config Server connection       |
+
+

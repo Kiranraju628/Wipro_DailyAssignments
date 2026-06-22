@@ -1,0 +1,529 @@
+Assignment 1: Application Classification
+========================================
+
+| Application                | Type            | Users     | Scalability | Security  | Recommended Architecture |
+| -------------------------- | --------------- | --------- | ----------- | --------- | ------------------------ |
+| Employee Management System | Standalone/Web  | Medium    | Low-Medium  | Medium    | Monolithic               |
+| E-Commerce Platform        | Distributed     | Very High | High        | High      | Microservices            |
+| Banking Application        | Distributed     | Very High | Very High   | Very High | SOA/Microservices        |
+| Hospital Management System | Web/Distributed | High      | Medium      | High      | SOA                      |
+| Food Delivery Application  | Cloud Native    | Very High | Very High   | High      | Microservices            |
+
+
+
+
+Assignment 2: Understanding SOA
+===============================
+
+SOA Architecture
+----------------
+
+Inventory Service
+Billing Service
+Customer Service
+Shipping Service
+
+
+Communication Flow
+------------------
+
+Customer Order
+      |
+Inventory Service
+      |
+Billing Service
+      |
+Shipping Service
+      |
+Customer Notification
+
+
+Components
+----------
+
+Service Provider
+
+Provides services to consumers.
+
+Service Consumer
+
+Uses services.
+
+Service Registry
+
+Stores available service information.
+
+ESB (Enterprise Service Bus)
+----------------------------
+
+Acts as middleware for:
+Routing
+Message transformation
+Security
+Integration
+
+
+
+
+Assignment 3: Thought Behind Microservices
+==========================================
+
+Monolithic Challenges
+---------------------
+
+1. Deployment Issues
+
+Entire application redeployed for small changes.
+
+2. Scaling Issues
+
+Whole application scaled instead of a single module.
+
+3. Team Collaboration Issues
+
+Multiple teams work on same codebase.
+
+4. Technology Constraints
+
+Single technology stack.
+
+5. Release Management Issues
+
+One module failure affects entire application.
+
+Why Monolith Becomes Difficult?
+-------------------------------
+
+Large codebase
+Slow deployment
+Difficult maintenance
+Poor scalability
+
+How Microservices Solve Problems?
+---------------------------------
+
+Independent deployment
+Independent scaling
+Technology flexibility
+Fault isolation
+
+Independent Services
+--------------------
+
+User Service
+Product Service
+Cart Service
+Order Service
+Payment Service
+
+
+
+
+Assignment 4: Monolithic Architecture Analysis
+==============================================
+
+Architecture
+------------
+
+                ERP Application
+                       |
+--------------------------------------------------
+| HR | Finance | Payroll | Attendance | Recruitment |
+--------------------------------------------------
+
+
+Advantages
+----------
+
+Easy development
+Simple deployment
+Easy testing initially
+
+Challenges
+----------
+
+Tight coupling
+Large codebase
+Difficult updates
+
+Deployment Problems
+-------------------
+
+Full application redeployment
+Longer downtime
+
+Scaling Problems
+----------------
+Entire application must scale
+
+Maintenance Issues
+------------------
+
+Difficult debugging
+Difficult upgrades
+
+
+
+
+Assignment 5: Monolith vs Microservices
+=======================================
+
+| Feature              | Monolith    | Microservices      |
+| -------------------- | ----------- | ------------------ |
+| Deployment           | Single Unit | Independent        |
+| Scalability          | Entire App  | Individual Service |
+| Team Size            | Small       | Large              |
+| Technology Diversity | Limited     | Flexible           |
+| Database             | Shared      | Per Service        |
+| Maintenance          | Difficult   | Easier             |
+| Testing              | Simpler     | Complex            |
+| Release Cycle        | Slow        | Fast               |
+| Fault Isolation      | Poor        | Good               |
+| Availability         | Lower       | Higher             |
+| CI/CD                | Difficult   | Easy               |
+| Security             | Centralized | Distributed        |
+| Monitoring           | Easy        | Complex            |
+| Flexibility          | Low         | High               |
+| Cloud Support        | Limited     | Excellent          |
+
+
+
+Assignment 6: Important Attributes of Microservices
+===================================================
+
+1. Independent Deployment
+
+Each service deployed separately.
+
+Example:
+Order Service updated without affecting Payment Service.
+
+2. Loose Coupling
+
+Services communicate through APIs.
+
+3. High Cohesion
+
+Each service performs one business function.
+
+4. Scalability
+
+Scale only required service.
+
+5. Fault Isolation
+
+Failure in Payment Service won't crash User Service.
+
+6. Decentralized Data Management
+
+Separate database per service.
+
+7. Technology Heterogeneity
+
+Different services use different technologies.
+
+8. Automation
+
+CI/CD pipelines automate deployment.
+
+
+Food Delivery Example
+---------------------
+
+| Service            | Attribute Implementation |
+| ------------------ | ------------------------ |
+| User Service       | Independent deployment   |
+| Restaurant Service | Separate database        |
+| Order Service      | High cohesion            |
+| Payment Service    | Fault isolation          |
+| Delivery Service   | Independent scaling      |
+
+
+
+
+Assignment 7: Advantages and Disadvantages
+==========================================
+
+Advantages
+----------
+
+Independent deployment
+Better scalability
+Faster release cycle
+Technology flexibility
+Improved fault isolation
+
+Disadvantages
+-------------
+
+Distributed transactions
+Network latency
+Complex monitoring
+Security challenges
+Higher operational overhead
+
+Recommendation
+--------------
+
+Should Startup Migrate?
+
+Yes, if application growth is high.
+
+Why?
+----
+
+Better scalability
+Faster development
+Independent releases
+
+Risks
+-----
+
+Increased complexity
+Infrastructure cost
+Monitoring challenges
+
+
+
+Assignment 8: Microservices Frameworks
+======================================
+
+| Framework    | Features             | Advantages          | Use Cases       |
+| ------------ | -------------------- | ------------------- | --------------- |
+| Spring Boot  | Auto Configuration   | Easy Development    | Enterprise Apps |
+| Spring Cloud | Distributed Features | Cloud Native        | Microservices   |
+| Quarkus      | Fast Startup         | Kubernetes Friendly | Cloud Apps      |
+| Micronaut    | Low Memory           | High Performance    | Serverless      |
+| Dropwizard   | REST APIs            | Lightweight         | Web Services    |
+| Helidon      | MicroProfile         | Cloud Ready         | Java Cloud Apps |
+
+
+Controller
+----------
+
+@RestController
+public class WelcomeController {
+
+    @GetMapping("/welcome")
+    public String welcome() {
+        return "Welcome to Microservices";
+    }
+}
+
+
+
+
+Assignment 9: Online Banking Architecture
+=========================================
+
+Architecture
+------------
+
+                 API Gateway
+                       |
+---------------------------------------------------
+| Customer | Account | Loan | Transaction | Auth |
+---------------------------------------------------
+                       |
+                 Service Registry
+                       |
+                  Config Server
+                       |
+                  Load Balancer
+                       |
+                 Circuit Breaker
+                       |
+               Monitoring & Logs
+
+
+Components
+----------
+
+API Gateway
+Single entry point.
+
+Service Registry
+Service discovery.
+
+Config Server
+Centralized configuration.
+
+Load Balancer
+Distributes traffic.
+
+Circuit Breaker
+Prevents cascading failures.
+
+Monitoring
+Tracks system health.
+
+Logging
+Centralized logs.
+
+
+
+Assignment 10: Microservices Design Patterns
+============================================
+
+| Pattern              | Purpose                 | Problem Solved     | Example              |
+| -------------------- | ----------------------- | ------------------ | -------------------- |
+| API Gateway          | Single Entry Point      | Multiple Endpoints | Netflix              |
+| Service Discovery    | Locate Services         | Dynamic Services   | Eureka               |
+| Circuit Breaker      | Failure Handling        | Cascading Failures | Resilience4j         |
+| Saga                 | Distributed Transaction | Data Consistency   | Order Processing     |
+| CQRS                 | Separate Read/Write     | Performance        | Banking              |
+| Event Sourcing       | Store Events            | Audit Trail        | Financial Systems    |
+| Database per Service | Data Isolation          | Tight Coupling     | E-Commerce           |
+| Strangler            | Gradual Migration       | Monolith Migration | Legacy Modernization |
+
+
+
+Assignment 11: Best Practices
+=============================
+
+Externalized Configuration
+Use Config Server.
+
+Centralized Logging
+Use ELK Stack.
+
+Distributed Tracing
+Use Zipkin.
+
+Health Checks
+Use Spring Boot Actuator.
+
+API Versioning
+/api/v1/orders
+
+JWT Security
+Token-based authentication.
+
+Containerization
+Use Docker.
+
+CI/CD
+Jenkins/GitHub Actions.
+
+Secure Order Service Design
+---------------------------
+
+Client
+  |
+JWT Authentication
+  |
+API Gateway
+  |
+Order Service
+  |
+Docker Container
+  |
+ELK Logging
+  |
+Prometheus + Grafana
+
+
+Assignment 12: 12-Factor Methodology
+====================================
+
+| Factor            | Followed? | Improvement           |
+| ----------------- | --------- | --------------------- |
+| Codebase          | Yes       | Git Repository        |
+| Dependencies      | Yes       | Maven                 |
+| Config            | Yes       | Environment Variables |
+| Backing Services  | Yes       | External DB           |
+| Build-Release-Run | Yes       | CI/CD                 |
+| Processes         | Yes       | Stateless Services    |
+| Port Binding      | Yes       | Embedded Server       |
+| Concurrency       | Yes       | Multiple Instances    |
+| Disposability     | Yes       | Fast Startup          |
+| Dev/Prod Parity   | Partial   | Docker                |
+| Logs              | No        | Centralized Logging   |
+| Admin Processes   | Partial   | Automation            |
+
+
+
+Assignment 13: Complete E-Commerce Microservices Solution
+=========================================================
+
+High-Level Architecture
+-----------------------
+
+                   Client
+                      |
+                 API Gateway
+                      |
+                JWT Security
+                      |
+--------------------------------------------------------
+| User | Product | Inventory | Cart | Order | Payment |
+--------------------------------------------------------
+                      |
+              Notification Service
+                      |
+--------------------------------------------------------
+| Eureka | Config Server | Logging | Monitoring |
+--------------------------------------------------------
+                      |
+              Docker + Kubernetes
+
+
+
+Service Communication Flow
+--------------------------
+
+User
+ |
+Cart Service
+ |
+Order Service
+ |
+Inventory Service
+ |
+Payment Service
+ |
+Notification Service
+
+
+Database Design
+---------------
+
+| Service           | Database    |
+| ----------------- | ----------- |
+| User Service      | UserDB      |
+| Product Service   | ProductDB   |
+| Inventory Service | InventoryDB |
+| Cart Service      | CartDB      |
+| Order Service     | OrderDB     |
+| Payment Service   | PaymentDB   |
+
+
+
+Design Patterns Used
+--------------------
+
+API Gateway
+Service Discovery
+Circuit Breaker
+Saga Pattern
+Database Per Service
+
+Best Practices Followed
+-----------------------
+
+JWT Security
+Docker Containers
+Kubernetes Deployment
+Centralized Logging
+Monitoring
+CI/CD
+
+12-Factor Compliance
+--------------------
+
+Single Codebase ✓
+Dependencies via Maven ✓
+External Config ✓
+Stateless Processes ✓
+Centralized Logging ✓
+Cloud Deployment ✓

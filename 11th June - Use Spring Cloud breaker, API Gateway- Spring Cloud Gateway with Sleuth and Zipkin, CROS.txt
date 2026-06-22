@@ -1,0 +1,564 @@
+Assignment 1: Create Product Microservice
+=========================================
+
+Product Entity
+--------------
+
+public class Product {
+
+    private Long productId;
+    private String productName;
+    private Double price;
+
+    // Getters and Setters
+}
+
+
+Product Controller
+------------------
+
+@RestController
+@RequestMapping("/products")
+public class ProductController {
+
+    private List<Product> products = new ArrayList<>();
+
+    @GetMapping
+    public ResponseEntity<List<Product>> getAllProducts() {
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Product> getProduct(
+            @PathVariable Long id) {
+
+        return products.stream()
+                .filter(p -> p.getProductId().equals(id))
+                .findFirst()
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<Product> addProduct(
+            @RequestBody Product product) {
+
+        products.add(product);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(product);
+    }
+}
+
+
+HTTP Status Codes
+-----------------
+
+| Operation         | Status        |
+| ----------------- | ------------- |
+| GET Success       | 200 OK        |
+| POST Success      | 201 CREATED   |
+| Product Not Found | 404 NOT FOUND |
+
+
+
+Sample Response
+---------------
+
+[
+  {
+    "productId": 1,
+    "productName": "Laptop",
+    "price": 50000
+  }
+]
+
+
+
+
+Assignment 2: Create Order Microservice
+=======================================
+
+Order Entity
+------------
+
+public class Order {
+
+    private Long orderId;
+    private Long productId;
+    private Integer quantity;
+
+    // Getters and Setters
+}
+
+
+RestTemplate Bean
+-----------------
+
+@Bean
+public RestTemplate restTemplate() {
+    return new RestTemplate();
+}
+
+
+Order Service
+-------------
+
+@Service
+public class OrderService {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    private List<Order> orders = new ArrayList<>();
+
+    public Order createOrder(Order order) {
+
+        String url =
+                "http://localhost:8081/products/"
+                + order.getProductId();
+
+        ResponseEntity<Product> response =
+                restTemplate.getForEntity(
+                        url,
+                        Product.class);
+
+        if(response.getStatusCode().is2xxSuccessful()) {
+            orders.add(order);
+            return order;
+        }
+
+        throw new RuntimeException(
+                "Product does not exist");
+    }
+
+    public List<Order> getOrders() {
+        return orders;
+    }
+}
+
+
+Order Controller
+----------------
+
+@RestController
+@RequestMapping("/orders")
+public class OrderController {
+
+    @Autowired
+    private OrderService service;
+
+    @PostMapping
+    public Order createOrder(
+            @RequestBody Order order) {
+
+        return service.createOrder(order);
+    }
+
+    @GetMapping
+    public List<Order> getOrders() {
+        return service.getOrders();
+    }
+}
+
+
+
+Assignment 3: Spring Cloud Gateway
+==================================
+
+Dependency
+----------
+
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>
+        spring-cloud-starter-gateway
+    </artifactId>
+</dependency>
+
+
+application.yml
+---------------
+
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      routes:
+
+        - id: product-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/product/**
+
+        - id: order-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/order/**
+
+
+Routing Example
+---------------
+
+Client Request
+http://localhost:8080/product/products
+
+↓
+
+Gateway
+
+↓
+
+http://localhost:8081/products
+
+
+Benefits
+Single Entry Point
+Backend URLs Hidden
+Centralized Security
+
+
+
+
+Assignment 4: API Gateway Filters
+=================================
+
+Global Filter
+-------------
+
+@Component
+public class LoggingFilter
+        implements GlobalFilter {
+
+    @Override
+    public Mono<Void> filter(
+            ServerWebExchange exchange,
+            GatewayFilterChain chain) {
+
+        System.out.println(
+                "Incoming Request:");
+
+        System.out.println(
+                "URI : "
+                + exchange.getRequest().getURI());
+
+        System.out.println(
+                "Method : "
+                + exchange.getRequest().getMethod());
+
+        System.out.println(
+                "Time : "
+                + LocalDateTime.now());
+
+        return chain.filter(exchange);
+    }
+}
+
+
+Sample Output
+-------------
+
+Incoming Request
+
+URI : /products
+Method : GET
+Time : 2026-06-12 10:00:00
+
+
+
+Assignment 5: Distributed Tracing with Spring Cloud Sleuth
+==========================================================
+
+Dependency
+----------
+
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>
+        spring-cloud-starter-sleuth
+    </artifactId>
+</dependency>
+
+
+Add To
+Product Service
+Order Service
+
+Sample Log
+[6f45a7b1-1a2b3c4d]
+Received Request
+
+
+Components
+----------
+
+| Component | Purpose                         |
+| --------- | ------------------------------- |
+| TraceId   | Entire request identifier       |
+| SpanId    | Individual operation identifier |
+
+
+Outcome
+End-to-end request tracking
+Easier debugging
+
+
+
+
+Assignment 6: Zipkin Integration
+================================
+
+Run Zipkin
+----------
+docker run -d -p 9411:9411 openzipkin/zipkin
+
+application.yml
+---------------
+
+spring:
+  zipkin:
+    base-url: http://localhost:9411
+
+
+Verify
+Open:
+http://localhost:9411
+
+Flow
+----
+
+Client
+   |
+Gateway
+   |
+Order Service
+   |
+Product Service
+
+
+Benefits
+Visual tracing
+Performance analysis
+Latency detection
+
+
+Assignment 7: Spring Security Basics
+====================================
+
+Dependency
+----------
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>
+        spring-boot-starter-security
+    </artifactId>
+</dependency>
+
+
+Security Configuration
+----------------------
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http)
+            throws Exception {
+
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth ->
+                auth.anyRequest()
+                    .authenticated())
+            .httpBasic();
+
+        return http.build();
+    }
+}
+
+
+Expected Result
+
+Without credentials:
+401 Unauthorized
+
+
+
+
+Assignment 8: Basic Authentication
+==================================
+
+application.properties
+----------------------
+
+spring.security.user.name=admin
+spring.security.user.password=admin123
+
+Request Header
+--------------
+
+Authorization:
+Basic Base64(admin:admin123)
+
+Example
+Username : admin
+Password : admin123
+
+Results
+-------
+| User                | Result           |
+| ------------------- | ---------------- |
+| Valid Credentials   | Access Granted   |
+| Invalid Credentials | 401 Unauthorized |
+
+
+
+Assignment 9: Role-Based Authorization
+======================================
+
+Configuration
+-------------
+
+@Bean
+public UserDetailsService users() {
+
+    UserDetails admin =
+            User.builder()
+                    .username("admin")
+                    .password("{noop}admin123")
+                    .roles("ADMIN")
+                    .build();
+
+    UserDetails user =
+            User.builder()
+                    .username("user")
+                    .password("{noop}user123")
+                    .roles("USER")
+                    .build();
+
+    return new InMemoryUserDetailsManager(
+            admin,
+            user);
+}
+
+
+Security Rules
+--------------
+
+http.authorizeHttpRequests(auth -> auth
+
+.requestMatchers(HttpMethod.POST,
+"/products")
+.hasRole("ADMIN")
+
+.requestMatchers(HttpMethod.GET,
+"/products/**")
+.hasAnyRole("USER","ADMIN")
+
+.anyRequest()
+.authenticated());
+
+
+Access Matrix
+-------------
+| API                | ADMIN | USER |
+| ------------------ | ----- | ---- |
+| GET /products      | ✓     | ✓    |
+| GET /products/{id} | ✓     | ✓    |
+| POST /products     | ✓     | ✗    |
+
+
+
+Assignment 10: Enable CORS
+==========================
+
+Global CORS Configuration
+-------------------------
+
+@Configuration
+public class CorsConfig {
+
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+
+        return new WebMvcConfigurer() {
+
+            @Override
+            public void addCorsMappings(
+                    CorsRegistry registry) {
+
+                registry.addMapping("/**")
+                        .allowedOrigins(
+                            "http://localhost:4200")
+                        .allowedMethods(
+                            "*");
+            }
+        };
+    }
+}
+
+
+Verification
+Allowed
+
+Angular
+http://localhost:4200
+
+Result
+No CORS Error
+
+
+
+
+Assignment 11: End-to-End Integration
+=====================================
+
+Architecture Diagram
+--------------------
+
+                 Client
+                    |
+                    |
+             API Gateway
+                    |
+             Authentication
+                    |
+            ----------------
+            |              |
+      Order Service   Product Service
+            |
+      RestTemplate
+            |
+      Product Service
+            |
+      Sleuth TraceId
+            |
+          Zipkin
+
+
+Request Flow
+------------
+
+1. Client sends request
+
+2. Gateway receives request
+
+3. Authentication validated
+
+4. Request forwarded to Order Service
+
+5. Order Service calls Product Service
+
+6. Product validated
+
+7. TraceId generated
+
+8. Logs sent to Zipkin
+
+9. Response returned

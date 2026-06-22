@@ -1,0 +1,649 @@
+Section 1: Conceptual Questions
+===============================
+
+1. What is Netflix OSS?
+-----------------------
+
+Netflix OSS (Open Source Software) is a collection of tools developed by Netflix to build scalable and resilient microservices applications.
+
+Role in Microservices
+Service Discovery
+Load Balancing
+API Gateway
+Fault Tolerance
+Distributed Configuration
+
+Key Components
+--------------
+
+| Component | Purpose                         |
+| --------- | ------------------------------- |
+| Eureka    | Service Discovery Server        |
+| Ribbon    | Client-side Load Balancer       |
+| Zuul      | API Gateway                     |
+| Hystrix   | Circuit Breaker/Fault Tolerance |
+
+
+Brief Description
+
+Eureka
+
+Registers services
+Helps services discover each other
+
+Ribbon
+
+Distributes requests among service instances
+
+Zuul
+
+Single entry point for APIs
+Routing and filtering
+
+Hystrix
+
+Prevents cascading failures
+Provides fallback mechanisms
+
+
+
+2. What is Spring Cloud?
+------------------------
+
+Definition
+
+Spring Cloud is a framework that provides tools for building distributed and cloud-native microservices applications.
+
+How It Simplifies Microservices
+
+Provides built-in support for:
+
+Service Discovery
+Load Balancing
+API Gateway
+Distributed Configuration
+Circuit Breakers
+Distributed Tracing
+
+Spring Boot vs Spring Cloud
+---------------------------
+
+| Feature                  | Spring Boot        | Spring Cloud              |
+| ------------------------ | ------------------ | ------------------------- |
+| Purpose                  | Build applications | Build distributed systems |
+| Focus                    | Single application | Multiple microservices    |
+| Service Discovery        | No                 | Yes                       |
+| Load Balancing           | No                 | Yes                       |
+| API Gateway              | No                 | Yes                       |
+| Configuration Management | Basic              | Centralized               |
+
+
+3. Service Discovery
+--------------------
+
+What is Service Discovery?
+
+A mechanism through which microservices locate and communicate with each other dynamically.
+
+Why Required?
+
+In cloud environments:
+
+IP addresses change
+Containers restart frequently
+Services scale dynamically
+
+Hardcoding URLs becomes impossible.
+
+What Problem Does Eureka Solve?
+
+Eureka maintains a registry of available services.
+
+Instead of:
+
+http://localhost:8081/employees
+
+Use:
+
+http://EMPLOYEE-SERVICE/employees
+
+Eureka resolves the actual instance.
+
+
+
+4. Load Balancing
+-----------------
+
+Client-Side Load Balancing
+
+The client chooses which service instance should receive the request.
+
+Example:
+--------
+
+Department Service
+        |
+   Eureka Lookup
+        |
+Employee Instance 1
+Employee Instance 2
+Employee Instance 3
+
+Client-side vs Server-side
+--------------------------
+
+| Feature        | Client-Side             | Server-Side     |
+| -------------- | ----------------------- | --------------- |
+| Decision Maker | Client                  | Load Balancer   |
+| Example        | Ribbon, Spring Cloud LB | Nginx           |
+| Network Hop    | Less                    | Extra Hop       |
+| Performance    | Faster                  | Slightly Slower |
+
+
+Why Ribbon Replaced?
+
+Ribbon is now maintenance mode.
+
+Spring Cloud LoadBalancer:
+
+Lightweight
+Better Spring Integration
+Actively maintained
+
+
+
+5. OpenFeign
+------------
+
+What is OpenFeign?
+
+A declarative REST client used for communication between microservices.
+
+Why Declarative?
+
+Instead of writing HTTP calls manually:
+
+@FeignClient(name="employee-service")
+public interface EmployeeClient {
+
+    @GetMapping("/employees/{id}")
+    Employee getEmployeeById(@PathVariable Long id);
+
+}
+
+
+Advantages Over RestTemplate
+----------------------------
+
+| RestTemplate          | OpenFeign          |
+| --------------------- | ------------------ |
+| More code             | Less code          |
+| Manual URL handling   | Service name based |
+| Manual serialization  | Automatic          |
+| Difficult maintenance | Easy maintenance   |
+
+
+
+
+Section 2: Hands-on Setup Tasks
+===============================
+
+Task 1: Create Eureka Server
+----------------------------
+
+Dependencies
+------------
+
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+</dependency>
+
+
+Main Class
+----------
+
+@SpringBootApplication
+@EnableEurekaServer
+public class EurekaServerApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(EurekaServerApplication.class,args);
+    }
+}
+
+
+application.properties
+----------------------
+
+server.port=8761
+
+eureka.client.register-with-eureka=false
+eureka.client.fetch-registry=false
+
+Run
+http://localhost:8761
+
+Expected:
+
+Eureka Dashboard
+
+
+
+Task 2: Employee Microservice (Producer)
+----------------------------------------
+
+Dependencies
+------------
+
+spring-boot-starter-web
+spring-cloud-starter-netflix-eureka-client
+
+
+application.properties
+----------------------
+
+spring.application.name=employee-service
+server.port=8081
+
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka
+
+
+Employee Controller
+-------------------
+
+@RestController
+@RequestMapping("/employees")
+public class EmployeeController {
+
+    @GetMapping
+    public List<String> getEmployees() {
+        return List.of("John","David");
+    }
+
+    @GetMapping("/{id}")
+    public String getEmployee(@PathVariable Long id) {
+        return "Employee : " + id;
+    }
+
+    @PostMapping
+    public String saveEmployee() {
+        return "Employee Saved";
+    }
+}
+
+
+Expected:
+
+employee-service registered in Eureka
+
+
+
+Task 3: Department Service (Consumer)
+-------------------------------------
+
+RestTemplate Bean
+-----------------
+
+@Bean
+public RestTemplate restTemplate() {
+    return new RestTemplate();
+}
+
+
+Controller
+----------
+
+@RestController
+@RequestMapping("/departments")
+public class DepartmentController {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @GetMapping("/{id}/with-employees")
+    public String getDepartmentEmployees(
+            @PathVariable Long id) {
+
+        return restTemplate.getForObject(
+            "http://localhost:8081/employees",
+            String.class);
+    }
+}
+
+
+Section 3: Spring Cloud LoadBalancer
+====================================
+
+Configuration
+-------------
+
+@Bean
+@LoadBalanced
+public RestTemplate restTemplate() {
+    return new RestTemplate();
+}
+
+Service Call
+------------
+
+restTemplate.getForObject(
+        "http://EMPLOYEE-SERVICE/employees",
+        String.class);
+
+Multiple Instances
+------------------
+Employee Service 1 → 8081
+Employee Service 2 → 8082
+Employee Service 3 → 8083
+
+
+Questions
+---------
+
+1. How Does LoadBalancer Choose Instance?
+
+Default algorithm:
+
+Round Robin
+
+Example:
+
+Request1 → 8081
+Request2 → 8082
+Request3 → 8083
+Request4 → 8081
+
+
+2. What Happens When One Instance Goes Down?
+
+Eureka removes unhealthy instance.
+
+Requests are automatically routed to active instances.
+
+
+
+
+
+Section 4: OpenFeign Implementation
+===================================
+
+Dependency
+----------
+
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+
+Enable Feign
+------------
+
+@SpringBootApplication
+@EnableFeignClients
+public class DepartmentApplication {
+}
+
+Feign Client
+------------
+
+@FeignClient(name="employee-service")
+public interface EmployeeClient {
+
+    @GetMapping("/employees/{id}")
+    String getEmployeeById(
+            @PathVariable Long id);
+}
+
+Controller
+----------
+
+@RestController
+public class DepartmentController {
+
+    @Autowired
+    private EmployeeClient employeeClient;
+
+    @GetMapping("/employee/{id}")
+    public String getEmployee(
+            @PathVariable Long id) {
+
+        return employeeClient.getEmployeeById(id);
+    }
+}
+
+
+Section 5: Architecture Design
+==============================
+
+Architecture Diagram
+--------------------
+
+                    Eureka Server
+                         |
+          --------------------------------
+          |                              |
+Employee Service 1               Employee Service 2
+          |                              |
+          --------------------------------
+                         |
+                 Load Balancer
+                         |
+                 Feign Client
+                         |
+                 Department Service
+                         |
+                       User
+
+
+Request Flow
+------------
+
+User
+ |
+Department Service
+ |
+Feign Client
+ |
+Eureka Server
+ |
+Employee Service
+ |
+Response
+
+
+During Scaling
+--------------
+
+1 Instance
+     ↓
+3 Instances
+     ↓
+Traffic Distributed
+
+
+During Failure
+--------------
+
+Employee-1 Down
+       ↓
+Eureka Removes Instance
+       ↓
+Traffic Sent To Others
+
+
+Section 6: Mini Project – Student Course Microservices
+======================================================
+
+Services
+--------
+
+Student Service
+
+CRUD Operations:
+GET /students
+GET /students/{id}
+POST /students
+PUT /students/{id}
+DELETE /students/{id}
+
+Course Service
+
+CRUD Operations:
+GET /courses
+GET /courses/{id}
+POST /courses
+PUT /courses/{id}
+DELETE /courses/{id}
+
+Enrollment Service
+
+Uses Feign Clients.
+
+@FeignClient(name="student-service")
+public interface StudentClient {
+}
+
+@FeignClient(name="course-service")
+public interface CourseClient {
+}
+
+
+DTO
+---
+
+public class EnrollmentDTO {
+
+    private Student student;
+    private Course course;
+
+}
+
+
+Architecture
+------------
+
+                    Eureka Server
+                          |
+ ------------------------------------------------
+ |                     |                         |
+Student Service   Course Service      Enrollment Service
+                                               |
+                                         Feign Clients
+                                               |
+                                       Load Balancer
+
+
+Bonus Features
+--------------
+
+Circuit Breaker
+@CircuitBreaker(name="student-service",
+fallbackMethod="fallback")
+
+API Gateway
+-----------
+
+Client
+  |
+API Gateway
+  |
+Microservices
+
+Correlation ID Logging
+----------------------
+
+UUID correlationId =
+UUID.randomUUID();
+
+
+
+Module 2: Spring Boot Microservices Setup
+=========================================
+
+Task 1: Create order-service
+----------------------------
+
+Controller
+----------
+
+@RestController
+@RequestMapping("/order")
+public class OrderController {
+
+    @GetMapping("/{id}")
+    public String getOrder(@PathVariable String id) {
+        return "Order Id : " + id;
+    }
+}
+
+Create payment-service
+----------------------
+
+Controller
+----------
+
+@RestController
+@RequestMapping("/payment")
+public class PaymentController {
+
+    @GetMapping("/{orderId}")
+    public String getPayment(
+            @PathVariable String orderId) {
+
+        return "Payment Success for Order "
+                + orderId;
+    }
+}
+
+
+Order Service Calling Payment Service
+-------------------------------------
+
+RestTemplate Bean
+-----------------
+
+@Bean
+public RestTemplate restTemplate() {
+    return new RestTemplate();
+}
+
+
+Service Class
+-------------
+
+@Service
+public class OrderService {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    public String getPayment(String orderId) {
+
+        return restTemplate.getForObject(
+                "http://localhost:8081/payment/"
+                        + orderId,
+                String.class);
+    }
+}
+
+
+Expected Flow (Without Circuit Breaker)
+---------------------------------------
+
+Order Service
+      |
+      ↓
+Payment Service
+
+
+If Payment Service is DOWN:
+---------------------------
+
+Request Timeout
+      ↓
+Order Service Failure
+      ↓
+Poor Performance
+      ↓
+System Instability
